@@ -1,5 +1,13 @@
-from collections.abc import AsyncGenerator
 
+import asyncio
+import sys
+from collections.abc import AsyncIterator
+
+from fastapi import Request
+
+# psycopg async cannot run on the Windows ProactorEventLoop.
+if sys.platform == "win32":
+    asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
 from sqlalchemy.ext.asyncio import (
     AsyncEngine,
     AsyncSession,
@@ -7,16 +15,11 @@ from sqlalchemy.ext.asyncio import (
     create_async_engine,
 )
 
-from deepresearch.config import get_settings
+from deepresearch.config import Settings
 
 
-def create_database_engine() -> AsyncEngine:
-    """
-    Create the asynchronous SQLAlchemy engine.
-
-    Connection pooling is managed by SQLAlchemy.
-    """
-    settings = get_settings()
+def create_database_engine(settings: Settings) -> AsyncEngine:
+    """Create an asynchronous SQLAlchemy engine."""
 
     return create_async_engine(
         settings.database_url.get_secret_value(),
@@ -29,31 +32,30 @@ def create_database_engine() -> AsyncEngine:
     )
 
 
-engine = create_database_engine()
+def create_session_factory(
+    engine: AsyncEngine,
+) -> async_sessionmaker[AsyncSession]:
+    """Create the application's asynchronous session factory."""
 
-SessionFactory = async_sessionmaker(
-    bind=engine,
-    class_=AsyncSession,
-    expire_on_commit=False,
-    autoflush=False,
-)
+    return async_sessionmaker(
+        bind=engine,
+        class_=AsyncSession,
+        expire_on_commit=False,
+        autoflush=False,
+    )
 
 
-async def get_db_session() -> AsyncGenerator[AsyncSession, None]:
+async def get_db_session(
+    request: Request,
+) -> AsyncIterator[AsyncSession]:
     """
-    Provide an asynchronous database session.
+    Provide a database session for the duration of a request.
 
-    The session is closed automatically after the consumer finishes.
-
-    Transaction boundaries are controlled by the application service,
-    not implicitly committed by this dependency.
+    Transaction boundaries remain the responsibility of the
+    application service or unit of work.
     """
-    async with SessionFactory() as session:
+
+    session_factory = request.app.state.session_factory
+
+    async with session_factory() as session:
         yield session
-
-
-async def dispose_database_engine() -> None:
-    """
-    Close all connections in the SQLAlchemy connection pool.
-    """
-    await engine.dispose()
