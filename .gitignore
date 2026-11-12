@@ -33,3 +33,6 @@ htmlcov/
 # IDE
 .idea/
 .vscode/
+
+implementations.md
+test_logging.py
