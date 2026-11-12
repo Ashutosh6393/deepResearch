@@ -52,11 +52,17 @@ class Settings(BaseSettings):
 
     @model_validator(mode="after")
     def validate_environment_settings(self) -> "Settings":
-        if (
-            self.environment == Environment.PRODUCTION
-            and self.debug
-        ):
-            raise ValueError("Debug mode must be disabled in production.")
+        if self.environment == Environment.PRODUCTION:
+            if self.debug:
+                raise ValueError("Debug mode must be disabled in production.")
+
+            if (
+                self.database_url.get_secret_value()
+                == "postgresql+psycopg://deepresearch:deepresearch@localhost:5432/deepresearch"
+            ):
+                raise ValueError(
+                    "A production database URL must be explicitly configured."
+                )
 
         if not self.api_v1_prefix.startswith("/"):
             raise ValueError("API prefix must start with '/'.")
