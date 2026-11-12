@@ -1,4 +1,3 @@
-
 from enum import StrEnum
 from functools import lru_cache
 from typing import Literal
@@ -41,14 +40,18 @@ class Settings(BaseSettings):
     port: int = Field(default=8000, ge=1, le=65535)
 
     # Logging
-    log_level: Literal[
-        "DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"
-    ] = "INFO"
+    log_level: Literal["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"] = "INFO"
 
     # Database
     database_url: SecretStr = SecretStr(
-        "postgresql+psycopg://deepresearch:deepresearch@localhost:5432/deepresearch"
+        "postgresql+psycopg://deepresearch:deepresearch@127.0.0.1:5432/deepresearch"
     )
+
+    # Database connection pool
+    database_pool_size: int = Field(default=5, ge=1)
+    database_max_overflow: int = Field(default=10, ge=0)
+    database_pool_timeout: int = Field(default=30, ge=1)
+    database_pool_recycle: int = Field(default=1800, ge=60)
 
     @model_validator(mode="after")
     def validate_environment_settings(self) -> "Settings":
@@ -57,11 +60,11 @@ class Settings(BaseSettings):
                 raise ValueError("Debug mode must be disabled in production.")
 
             if (
-                self.database_url.get_secret_value()
-                == "postgresql+psycopg://deepresearch:deepresearch@localhost:5432/deepresearch"
+                self.environment == Environment.PRODUCTION
+                and "database_url" not in self.model_fields_set
             ):
                 raise ValueError(
-                    "A production database URL must be explicitly configured."
+                    "DATABASE_URL must be explicitly configured in production."
                 )
 
         if not self.api_v1_prefix.startswith("/"):
