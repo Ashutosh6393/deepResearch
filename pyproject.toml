@@ -1,7 +1,7 @@
 [project]
 name = "deepresearch"
 version = "0.1.0"
-description = "Add your description here"
+description = "Production-grade AI research agent built with LangGraph and LangChain"
 readme = "README.md"
 authors = [
     { name = "Ashutosh Verma", email = "vashutosh625@gmail.com" }
@@ -16,9 +16,6 @@ dependencies = [
     "structlog>=26.1.0",
     "uvicorn[standard]>=0.54.0",
 ]
-
-[project.scripts]
-deepresearch = "deepresearch:main"
 
 [build-system]
 requires = ["uv_build>=0.11.28,<0.12.0"]
