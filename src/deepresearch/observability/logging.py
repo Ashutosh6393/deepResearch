@@ -28,6 +28,7 @@ def configure_logging(settings: Settings | None = None) -> None:
         structlog.processors.format_exc_info,
     ]
 
+    renderer: Any
     if settings.environment == Environment.DEVELOPMENT:
         renderer = structlog.dev.ConsoleRenderer(
             colors=sys.stdout.isatty(),

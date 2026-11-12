@@ -1,14 +1,17 @@
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
+from typing import cast
 
 from fastapi import FastAPI
 from fastapi.exceptions import RequestValidationError
+from starlette.types import HTTPExceptionHandler
 
 from deepresearch.api.exception_handlers import (
     handle_application_error,
     handle_unexpected_error,
     handle_validation_error,
 )
+from deepresearch.api.middleware import RequestContextMiddleware
 from deepresearch.api.routes.health import router as health_router
 from deepresearch.config import Settings, get_settings
 from deepresearch.db.session import (
@@ -58,19 +61,21 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(health_router)
 
     app.add_exception_handler(
-    ApplicationError,
-    handle_application_error,
-)
+        ApplicationError,
+        cast(HTTPExceptionHandler, handle_application_error),
+    )
 
     app.add_exception_handler(
         RequestValidationError,
-        handle_validation_error,
+        cast(HTTPExceptionHandler, handle_validation_error),
     )
 
     app.add_exception_handler(
         Exception,
         handle_unexpected_error,
     )
+
+    app.add_middleware(RequestContextMiddleware)
 
     return app
 
